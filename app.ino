@@ -28,8 +28,8 @@ bool keys[colCount][rowCount];
 bool lastValue[colCount][rowCount];
 bool changedValue[colCount][rowCount];
 
-unsigned int keyboard[colCount][rowCount];
-unsigned int keyboard_symbol[colCount][rowCount];
+char keyboard[colCount][rowCount];
+char keyboard_symbol[colCount][rowCount];
 // uint8_t keyboard_alt[colCount][rowCount];
 
 
@@ -235,7 +235,7 @@ void printMatrix() {
               // delay(10);
               // Keyboard.releaseAll();
             } else {
-              unsigned int toPrint;
+              char toPrint;
               if (symbolSelected) {
                 symbolSelected = false;
                 toPrint = keyboard_symbol[colIndex][rowIndex];
