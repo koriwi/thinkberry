@@ -18,7 +18,7 @@ int freeMemory() {
 
 #include "HID-Project.h"
 
-byte rows[] = {2,3,4,5,6,7,8};VVVVVV
+byte rows[] = {2,3,4,5,6,7,8};
 const int rowCount = sizeof(rows)/sizeof(rows[0]);
  
 byte cols[] = {15, A0, A1, A2, A3};
@@ -35,7 +35,7 @@ unsigned int keyboard_symbol[colCount][rowCount];
 
 bool symbolSelected;
 bool altSelected;
-
+348348354354354354356356356356
 void setup() {
     Serial.begin(115200);
     Keyboard.begin();
@@ -251,7 +251,7 @@ void printMatrix() {
               // if(toPrint <= 255) {
                 Serial.println(KeyboardKeycode((int)"g"));
                 Serial.println(KeyboardKeycode(keyboard[colIndex][rowIndex]));
-                Keyboard.write(keyboard[colIndex][rowIndex]);
+                Keyboard.print(String(keyboard[colIndex][rowIndex]));
                 // delay(10);
                 // Keyboard.releaseAll();
               // } else {
