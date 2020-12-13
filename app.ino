@@ -35,7 +35,6 @@ unsigned int keyboard_symbol[colCount][rowCount];
 
 bool symbolSelected;
 bool altSelected;
-348348354354354354356356356356
 void setup() {
     Serial.begin(115200);
     Keyboard.begin();
