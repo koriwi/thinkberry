@@ -1,7 +1,3 @@
-// todo:
-// be able to use alt and ctrl in combo mode
-// example: [combo, alt, alt+i=arrow_up, combo]
-
 #include "HID-Project.h"
 
 byte rows[] = {2, 3, 4, 5, 6, 7, 8};
@@ -14,17 +10,24 @@ bool keys[colCount][rowCount];
 bool lastValue[colCount][rowCount];
 bool changedValue[colCount][rowCount];
 
-KeyboardKeycode memory[] = {0, 0, 0, 0, 0};
+KeyboardKeycode memory[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
 uint8_t memoryCounter = 0;
 uint8_t lastMemoryCounter = 0;
 
-uint8_t keyboard[colCount][rowCount];
+uint16_t keyboard[colCount][rowCount];
 uint16_t keyboard_symbol[colCount][rowCount];
 uint16_t keyboard_alt[colCount][rowCount];
 
+// symbol and alt are used to send alt and ctrl
+// but also to access 2nd and 3d keyboard level
+// if one was used to access a keyboard level, dont send 
+// keypress on release
 bool symbolSelected;
 bool altSelected;
-bool combo;
+
+bool comboModeActive;
+
 void setup() {
 	Serial.begin(115200);
 	Keyboard.begin();
@@ -34,7 +37,7 @@ void setup() {
 	keyboard[0][3] = KEY_A;
 	keyboard[0][4] = NULL;	// ALT
 	keyboard[0][5] = KEY_SPACE;
-	keyboard[0][6] = NULL;	// Mic
+	keyboard[0][6] = KEY_SMALLER;	// Mic
 
 	keyboard[1][0] = KEY_E;
 	keyboard[1][1] = KEY_S;
@@ -55,7 +58,7 @@ void setup() {
 	keyboard[3][0] = KEY_U;
 	keyboard[3][1] = KEY_H;
 	keyboard[3][2] = KEY_Z;
-	keyboard[3][3] = NULL;	// Enter
+	keyboard[3][3] = KEY_ENTER;	// Enter
 	keyboard[3][4] = KEY_B;
 	keyboard[3][5] = KEY_N;
 	keyboard[3][6] = KEY_J;
@@ -63,7 +66,7 @@ void setup() {
 	keyboard[4][0] = KEY_O;
 	keyboard[4][1] = KEY_L;
 	keyboard[4][2] = KEY_I;
-	keyboard[4][3] = NULL;	// Backspace
+	keyboard[4][3] = KEY_BACKSPACE;	// Backspace
 	keyboard[4][4] = NULL;
 	keyboard[4][5] = KEY_M;
 	keyboard[4][6] = KEY_K;
@@ -73,7 +76,7 @@ void setup() {
 	keyboard_symbol[0][2] = NULL;
 	keyboard_symbol[0][3] = KEY_PLUS | MOD_LEFT_SHIFT;
 	keyboard_symbol[0][4] = NULL;
-	keyboard_symbol[0][5] = NULL;
+	keyboard_symbol[0][5] = KEY_TAB;
 	keyboard_symbol[0][6] = KEY_0;
 
 	keyboard_symbol[1][0] = KEY_2;
@@ -95,7 +98,7 @@ void setup() {
 	keyboard_symbol[3][0] = KEY_MINUS | MOD_LEFT_SHIFT;
 	keyboard_symbol[3][1] = KEY_PERIOD | MOD_LEFT_SHIFT;
 	keyboard_symbol[3][2] = KEY_9 | MOD_LEFT_SHIFT;
-	keyboard_symbol[3][3] = NULL;
+	keyboard_symbol[3][3] = KEY_PAGE_DOWN;
 	keyboard_symbol[3][4] = KEY_1 | MOD_LEFT_SHIFT;
 	keyboard_symbol[3][5] = KEY_COMMA;
 	keyboard_symbol[3][6] = KEY_COMMA | MOD_LEFT_SHIFT;
@@ -103,23 +106,23 @@ void setup() {
 	keyboard_symbol[4][0] = KEY_PLUS;
 	keyboard_symbol[4][1] = KEY_2 | MOD_LEFT_SHIFT;
 	keyboard_symbol[4][2] = KEY_MINUS;
-	keyboard_symbol[4][3] = NULL;
+	keyboard_symbol[4][3] = KEY_PAGE_UP;
 	keyboard_symbol[4][4] = KEY_E | MOD_RIGHT_ALT;
 	keyboard_symbol[4][5] = KEY_PERIOD;
 	keyboard_symbol[4][6] = KEY_HASHTAG | MOD_LEFT_SHIFT;
 
-	keyboard_alt[0][0] = NULL;
+	keyboard_alt[0][0] = KEY_ESC;
 	keyboard_alt[0][1] = KEY_F1;
 	keyboard_alt[0][2] = NULL;
 	keyboard_alt[0][3] = NULL;
 	keyboard_alt[0][4] = NULL;
-	keyboard_alt[0][5] = NULL;
-	keyboard_alt[0][6] = KEY_F10;
+	keyboard_alt[0][5] = KEY_LEFT_GUI;
+	keyboard_alt[0][6] = KEY_SMALLER | MOD_RIGHT_ALT;
 
 	keyboard_alt[1][0] = KEY_F2;
 	keyboard_alt[1][1] = KEY_F4;
 	keyboard_alt[1][2] = KEY_F5;
-	keyboard_alt[1][3] = KEY_LEFT_GUI;
+	keyboard_alt[1][3] = KEY_PLUS | MOD_RIGHT_ALT;
 	keyboard_alt[1][4] = KEY_F8;
 	keyboard_alt[1][5] = KEY_F7;
 	keyboard_alt[1][6] = NULL;
@@ -135,7 +138,7 @@ void setup() {
 	keyboard_alt[3][0] = KEY_SZ | MOD_RIGHT_ALT;
 	keyboard_alt[3][1] = KEY_9 | MOD_RIGHT_ALT;
 	keyboard_alt[3][2] = KEY_0 | MOD_RIGHT_ALT;
-	keyboard_alt[3][3] = NULL;
+	keyboard_alt[3][3] = KEY_ESC;
 	keyboard_alt[3][4] = KEY_TAB | MOD_LEFT_SHIFT;
 	keyboard_alt[3][5] = NULL;
 	keyboard_alt[3][6] = KEY_LEFT_ARROW;
@@ -143,7 +146,7 @@ void setup() {
 	keyboard_alt[4][0] = KEY_0 | MOD_LEFT_SHIFT;
 	keyboard_alt[4][1] = KEY_RIGHT_ARROW;
 	keyboard_alt[4][2] = KEY_UP_ARROW;
-	keyboard_alt[4][3] = NULL;
+	keyboard_alt[4][3] = KEY_DELETE;
 	keyboard_alt[4][4] = KEY_4 | MOD_RIGHT_SHIFT;
 	keyboard_alt[4][5] = NULL;
 	keyboard_alt[4][6] = KEY_DOWN_ARROW;
@@ -162,7 +165,8 @@ void setup() {
 
 	symbolSelected = false;
 	altSelected = false;
-	combo = false;
+	comboModeActive = false;
+
 	pinMode(17, OUTPUT);
 	digitalWrite(17, HIGH);
 }
@@ -198,13 +202,6 @@ void readMatrix() {
 		// disable the column
 		pinMode(curCol, INPUT);
 	}
-
-	if (keyPressed(0, 2)) {
-		symbolSelected = true;
-	}
-	if (keyPressed(0, 4)) {
-		altSelected = true;
-	}
 }
 
 bool keyPressed(int colIndex, int rowIndex) {
@@ -220,6 +217,13 @@ bool keyActive(int colIndex, int rowIndex) {
 	return keys[colIndex][rowIndex] == true;
 }
 
+bool checkKey(int colIndex, int rowIndex) {
+	if (!comboModeActive)
+		return keyPressed(colIndex, rowIndex);
+	else
+		return keyReleased(colIndex, rowIndex);
+}
+
 bool isPrintableKey(int colIndex, int rowIndex) {
 	return (keyActive(0, 2) && keyboard_symbol[colIndex][rowIndex] != NULL) ||
 		   keyboard[colIndex][rowIndex] != NULL ||
@@ -227,7 +231,7 @@ bool isPrintableKey(int colIndex, int rowIndex) {
 }
 
 void pressKey(KeyboardKeycode k) {
-	if (combo) {
+	if (comboModeActive) {
 		if (lastMemoryCounter > 0) lastMemoryCounter = 0;
 		memory[memoryCounter++] = k;
 	} else {
@@ -236,7 +240,7 @@ void pressKey(KeyboardKeycode k) {
 }
 
 void releaseAll() {
-	if (!combo) {
+	if (!comboModeActive) {
 		Keyboard.releaseAll();
 	}
 }
@@ -244,6 +248,10 @@ void releaseAll() {
 void pressMemory() {
 	for (uint8_t i = 0; i < memoryCounter; i++) {
 		Keyboard.press(memory[i]);
+		delay(5);
+	}
+	for (uint8_t i = 0; i < memoryCounter; i++) {
+		Keyboard.release(memory[i]);
 		delay(5);
 	}
 	Keyboard.releaseAll();
@@ -254,18 +262,19 @@ void printMatrix() {
 		for (int colIndex = 0; colIndex < colCount; colIndex++) {
 			// we only want to print if the key is pressed and it is a printable
 			// character
-			if ((combo && keyReleased(colIndex, rowIndex)) ||
-				!combo && keyPressed(colIndex, rowIndex)) {
-				if (isPrintableKey(colIndex, rowIndex)) {
-					Serial.println("PRINTABLE");
+			if (isPrintableKey(colIndex, rowIndex)) {
+				if ((comboModeActive && keyReleased(colIndex, rowIndex)) ||
+					!comboModeActive && keyPressed(colIndex, rowIndex)) {
 					uint16_t input;
 					if (keyActive(0, 4)) {
 						input = keyboard_alt[colIndex][rowIndex];
+						altSelected = true;
 					} else if (keyActive(1, 6) || keyActive(2, 3)) {
 						pressKey(KeyboardKeycode(KEY_LEFT_SHIFT));
 						input = keyboard[colIndex][rowIndex];
 					} else if (keyActive(0, 2)) {
 						input = keyboard_symbol[colIndex][rowIndex];
+						symbolSelected = true;
 					} else {
 						input = keyboard[colIndex][rowIndex];
 					}
@@ -276,6 +285,7 @@ void printMatrix() {
 					}
 					if (input >= MOD_RIGHT_ALT) {
 						input -= MOD_RIGHT_ALT;
+						Serial.println("RIGHT ALT");
 						pressKey(KeyboardKeycode(KEY_RIGHT_ALT));
 					}
 					if (input >= MOD_RIGHT_SHIFT) {
@@ -304,32 +314,45 @@ void printMatrix() {
 					}
 					pressKey(KeyboardKeycode(input));
 					delay(10);
-
 					releaseAll();
-				} else {
-					Serial.println("else");
-					if (combo) {
-						if (colIndex == 0 && rowIndex == 2) {
-							pressKey(KeyboardKeycode(KEY_LEFT_CTRL));
+				}
+			} else {
+				if (keyReleased(0, 2) && colIndex == 0 && rowIndex == 2) {
+					if (!symbolSelected)
+						pressKey(KeyboardKeycode(KEY_LEFT_CTRL));
+					else {
+						symbolSelected = false;
+					}
+				}
+				if (keyReleased(0, 4) && colIndex == 0 && rowIndex == 4) {
+					if (!altSelected) {
+						pressKey(KeyboardKeycode(KEY_LEFT_ALT));
+					} else {
+						altSelected = false;
+					}
+				}
+				if (keyReleased(1, 6) && colIndex == 1 && rowIndex == 6) {
+					pressKey(KeyboardKeycode(KEY_LEFT_SHIFT));
+				}
+				if (keyReleased(2, 3) && colIndex == 2 && rowIndex == 3) {
+					pressKey(KeyboardKeycode(KEY_RIGHT_SHIFT));
+				}
+				releaseAll();
+				if (keyPressed(4, 4) && colIndex == 4 && rowIndex == 4) {
+					if (keyActive(1, 6) || keyActive(2, 3)) {
+						if (!comboModeActive) {
+							pressMemory();
 						}
-						if (colIndex == 0 && rowIndex == 4) {
-							pressKey(KeyboardKeycode(KEY_LEFT_ALT));
-						}
-					} else if (colIndex == 4 && rowIndex == 4) {
-						if (((keyActive(1, 6) || keyActive(2, 3)))) {
+					} else {
+						comboModeActive = !comboModeActive;
+						digitalWrite(17, comboModeActive);
+						if (!comboModeActive) {
 							pressMemory();
 						} else {
-							combo = true;
-							digitalWrite(17, combo);
 							memoryCounter = 0;
 						}
 					}
 				}
-			} else if (keyPressed(4, 4) && colIndex == 4 && rowIndex == 4) {
-				Serial.println("elseif");
-				combo = false;
-				pressMemory();
-				digitalWrite(17, combo);
 			}
 		}
 	}
@@ -339,25 +362,5 @@ void loop() {
 	readMatrix();
 
 	printMatrix();
-
-	// key 3,3 is the enter key
-	if (keyPressed(3, 3)) {
-		Keyboard.write(KEY_ENTER);
-	}
-
-	// key 4,3 is the backspace key
-	if (keyPressed(4, 3)) {
-		Keyboard.write(KEY_BACKSPACE);
-	}
-
-	// increase backlight if symbol key is pressed
-	// if (keyPressed(0,2)) {
-	//   changeBackgroundLight(keyboardLight + keyboardLightSteps);
-	// }
-
-	// // decrease backlight if right shift key is pressed
-	// if (keyPressed(2,3)) {
-	//   changeBackgroundLight(keyboardLight - keyboardLightSteps);
-	// }
 	delay(10);
 }
