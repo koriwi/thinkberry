@@ -14,6 +14,10 @@ bool keys[colCount][rowCount];
 bool lastValue[colCount][rowCount];
 bool changedValue[colCount][rowCount];
 
+KeyboardKeycode memory[] = {0, 0, 0, 0, 0};
+uint8_t memoryCounter = 0;
+uint8_t lastMemoryCounter = 0;
+
 uint8_t keyboard[colCount][rowCount];
 uint16_t keyboard_symbol[colCount][rowCount];
 uint16_t keyboard_alt[colCount][rowCount];
@@ -128,7 +132,7 @@ void setup() {
 	keyboard_alt[2][5] = KEY_F9;
 	keyboard_alt[2][6] = KEY_F6;
 
-	keyboard_alt[3][0] = NULL;
+	keyboard_alt[3][0] = KEY_SZ | MOD_RIGHT_ALT;
 	keyboard_alt[3][1] = KEY_9 | MOD_RIGHT_ALT;
 	keyboard_alt[3][2] = KEY_0 | MOD_RIGHT_ALT;
 	keyboard_alt[3][3] = NULL;
@@ -136,7 +140,7 @@ void setup() {
 	keyboard_alt[3][5] = NULL;
 	keyboard_alt[3][6] = KEY_LEFT_ARROW;
 
-	keyboard_alt[4][0] = NULL;
+	keyboard_alt[4][0] = KEY_0 | MOD_LEFT_SHIFT;
 	keyboard_alt[4][1] = KEY_RIGHT_ARROW;
 	keyboard_alt[4][2] = KEY_UP_ARROW;
 	keyboard_alt[4][3] = NULL;
@@ -207,6 +211,11 @@ bool keyPressed(int colIndex, int rowIndex) {
 	return changedValue[colIndex][rowIndex] && keys[colIndex][rowIndex] == true;
 }
 
+bool keyReleased(int colIndex, int rowIndex) {
+	return changedValue[colIndex][rowIndex] &&
+		   keys[colIndex][rowIndex] == false;
+}
+
 bool keyActive(int colIndex, int rowIndex) {
 	return keys[colIndex][rowIndex] == true;
 }
@@ -217,18 +226,43 @@ bool isPrintableKey(int colIndex, int rowIndex) {
 		   (keyActive(0, 4) && keyboard_alt[colIndex][rowIndex] != NULL);
 }
 
+void pressKey(KeyboardKeycode k) {
+	if (combo) {
+		if (lastMemoryCounter > 0) lastMemoryCounter = 0;
+		memory[memoryCounter++] = k;
+	} else {
+		Keyboard.press(k);
+	}
+}
+
+void releaseAll() {
+	if (!combo) {
+		Keyboard.releaseAll();
+	}
+}
+
+void pressMemory() {
+	for (uint8_t i = 0; i < memoryCounter; i++) {
+		Keyboard.press(memory[i]);
+		delay(5);
+	}
+	Keyboard.releaseAll();
+}
+
 void printMatrix() {
 	for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
 		for (int colIndex = 0; colIndex < colCount; colIndex++) {
 			// we only want to print if the key is pressed and it is a printable
 			// character
-			if (keyPressed(colIndex, rowIndex)) {
+			if ((combo && keyReleased(colIndex, rowIndex)) ||
+				!combo && keyPressed(colIndex, rowIndex)) {
 				if (isPrintableKey(colIndex, rowIndex)) {
+					Serial.println("PRINTABLE");
 					uint16_t input;
 					if (keyActive(0, 4)) {
 						input = keyboard_alt[colIndex][rowIndex];
 					} else if (keyActive(1, 6) || keyActive(2, 3)) {
-						Keyboard.press(KeyboardKeycode(KEY_LEFT_SHIFT));
+						pressKey(KeyboardKeycode(KEY_LEFT_SHIFT));
 						input = keyboard[colIndex][rowIndex];
 					} else if (keyActive(0, 2)) {
 						input = keyboard_symbol[colIndex][rowIndex];
@@ -236,64 +270,66 @@ void printMatrix() {
 						input = keyboard[colIndex][rowIndex];
 					}
 
-					if (input <= 255) {
-						Keyboard.write(KeyboardKeycode(input));
-					} else {
-						if (input >= MOD_RIGHT_GUI) {
-							input -= MOD_RIGHT_GUI;
-							Keyboard.press(KeyboardKeycode(KEY_RIGHT_GUI));
-						}
-						if (input >= MOD_RIGHT_ALT) {
-							input -= MOD_RIGHT_ALT;
-							Keyboard.press(KeyboardKeycode(KEY_RIGHT_ALT));
-						}
-						if (input >= MOD_RIGHT_SHIFT) {
-							input -= MOD_RIGHT_SHIFT;
-							Keyboard.press(KeyboardKeycode(KEY_RIGHT_SHIFT));
-						}
-						if (input >= MOD_RIGHT_CTRL) {
-							input -= MOD_RIGHT_CTRL;
-							Keyboard.press(KeyboardKeycode(KEY_RIGHT_CTRL));
-						}
-						if (input >= MOD_LEFT_GUI) {
-							input -= MOD_LEFT_GUI;
-							Keyboard.press(KeyboardKeycode(KEY_LEFT_GUI));
-						}
-						if (input >= MOD_LEFT_ALT) {
-							input -= MOD_LEFT_ALT;
-							Keyboard.press(KeyboardKeycode(KEY_LEFT_ALT));
-						}
-						if (input >= MOD_LEFT_SHIFT) {
-							input -= MOD_LEFT_SHIFT;
-							Keyboard.press(KeyboardKeycode(KEY_LEFT_SHIFT));
-						}
-						if (input >= MOD_LEFT_CTRL) {
-							input -= MOD_LEFT_CTRL;
-							Keyboard.press(KeyboardKeycode(KEY_LEFT_CTRL));
-						}
-						Keyboard.press(KeyboardKeycode(input));
-						delay(10);
+					if (input >= MOD_RIGHT_GUI) {
+						input -= MOD_RIGHT_GUI;
+						pressKey(KeyboardKeycode(KEY_RIGHT_GUI));
 					}
-					if (combo == false) {
-						Keyboard.releaseAll();
+					if (input >= MOD_RIGHT_ALT) {
+						input -= MOD_RIGHT_ALT;
+						pressKey(KeyboardKeycode(KEY_RIGHT_ALT));
 					}
+					if (input >= MOD_RIGHT_SHIFT) {
+						input -= MOD_RIGHT_SHIFT;
+						pressKey(KeyboardKeycode(KEY_RIGHT_SHIFT));
+					}
+					if (input >= MOD_RIGHT_CTRL) {
+						input -= MOD_RIGHT_CTRL;
+						pressKey(KeyboardKeycode(KEY_RIGHT_CTRL));
+					}
+					if (input >= MOD_LEFT_GUI) {
+						input -= MOD_LEFT_GUI;
+						pressKey(KeyboardKeycode(KEY_LEFT_GUI));
+					}
+					if (input >= MOD_LEFT_ALT) {
+						input -= MOD_LEFT_ALT;
+						pressKey(KeyboardKeycode(KEY_LEFT_ALT));
+					}
+					if (input >= MOD_LEFT_SHIFT) {
+						input -= MOD_LEFT_SHIFT;
+						pressKey(KeyboardKeycode(KEY_LEFT_SHIFT));
+					}
+					if (input >= MOD_LEFT_CTRL) {
+						input -= MOD_LEFT_CTRL;
+						pressKey(KeyboardKeycode(KEY_LEFT_CTRL));
+					}
+					pressKey(KeyboardKeycode(input));
+					delay(10);
+
+					releaseAll();
 				} else {
-					if (keyActive(4, 4)) {
-						combo = !combo;
-					}
-					if (combo == false) {
-						Keyboard.releaseAll();
-						digitalWrite(17, HIGH);
-					} else {
-						if (keyActive(0, 2)) {
-							Keyboard.press(KeyboardKeycode(KEY_LEFT_CTRL));
+					Serial.println("else");
+					if (combo) {
+						if (colIndex == 0 && rowIndex == 2) {
+							pressKey(KeyboardKeycode(KEY_LEFT_CTRL));
 						}
-						if (keyActive(0, 4)) {
-							Keyboard.press(KeyboardKeycode(KEY_LEFT_ALT));
+						if (colIndex == 0 && rowIndex == 4) {
+							pressKey(KeyboardKeycode(KEY_LEFT_ALT));
 						}
-						digitalWrite(17, LOW);
+					} else if (colIndex == 4 && rowIndex == 4) {
+						if (((keyActive(1, 6) || keyActive(2, 3)))) {
+							pressMemory();
+						} else {
+							combo = true;
+							digitalWrite(17, combo);
+							memoryCounter = 0;
+						}
 					}
 				}
+			} else if (keyPressed(4, 4) && colIndex == 4 && rowIndex == 4) {
+				Serial.println("elseif");
+				combo = false;
+				pressMemory();
+				digitalWrite(17, combo);
 			}
 		}
 	}
