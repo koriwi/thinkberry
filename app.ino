@@ -1,5 +1,5 @@
 #include "HID-Project.h"
-
+// #include "./TrackPoint.h"
 byte rows[] = {2, 3, 4, 5, 6, 7, 8};
 const int rowCount = sizeof(rows) / sizeof(rows[0]);
 
@@ -10,7 +10,7 @@ bool keys[colCount][rowCount];
 bool lastValue[colCount][rowCount];
 bool changedValue[colCount][rowCount];
 
-KeyboardKeycode memory[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t memory[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 uint8_t memoryCounter = 0;
 uint8_t lastMemoryCounter = 0;
@@ -229,13 +229,13 @@ bool isPrintableKey(int colIndex, int rowIndex) {
 		   keyboard[colIndex][rowIndex] != NULL ||
 		   (keyActive(0, 4) && keyboard_alt[colIndex][rowIndex] != NULL);
 }
-
-void pressKey(KeyboardKeycode k) {
+void pressKey(uint8_t k) {
 	if (comboModeActive) {
 		if (lastMemoryCounter > 0) lastMemoryCounter = 0;
 		memory[memoryCounter++] = k;
+
 	} else {
-		Keyboard.press(k);
+		Keyboard.press(KeyboardKeycode(k));
 	}
 }
 
@@ -247,11 +247,11 @@ void releaseAll() {
 
 void pressMemory() {
 	for (uint8_t i = 0; i < memoryCounter; i++) {
-		Keyboard.press(memory[i]);
+		Keyboard.press(KeyboardKeycode(memory[i]));
 		delay(5);
 	}
 	for (uint8_t i = 0; i < memoryCounter; i++) {
-		Keyboard.release(memory[i]);
+		Keyboard.release(KeyboardKeycode(memory[i]));
 		delay(5);
 	}
 	Keyboard.releaseAll();
@@ -270,72 +270,72 @@ void printMatrix() {
 						input = keyboard_alt[colIndex][rowIndex];
 						altSelected = true;
 					} else if (keyActive(1, 6) || keyActive(2, 3)) {
-						pressKey(KeyboardKeycode(KEY_LEFT_SHIFT));
+						pressKey(KEY_LEFT_SHIFT);
 						input = keyboard[colIndex][rowIndex];
 					} else if (keyActive(0, 2)) {
 						input = keyboard_symbol[colIndex][rowIndex];
 						symbolSelected = true;
 					} else {
-						input = keyboard[colIndex][rowIndex];
+						input = keyboard[colIndex][rowIndex];aass
 					}
 
 					if (input >= MOD_RIGHT_GUI) {
 						input -= MOD_RIGHT_GUI;
-						pressKey(KeyboardKeycode(KEY_RIGHT_GUI));
+						pressKey(KEY_RIGHT_GUI);
 					}
 					if (input >= MOD_RIGHT_ALT) {
 						input -= MOD_RIGHT_ALT;
 						Serial.println("RIGHT ALT");
-						pressKey(KeyboardKeycode(KEY_RIGHT_ALT));
+						pressKey(KEY_RIGHT_ALT);
 					}
 					if (input >= MOD_RIGHT_SHIFT) {
 						input -= MOD_RIGHT_SHIFT;
-						pressKey(KeyboardKeycode(KEY_RIGHT_SHIFT));
+						pressKey(KEY_RIGHT_SHIFT);
 					}
 					if (input >= MOD_RIGHT_CTRL) {
 						input -= MOD_RIGHT_CTRL;
-						pressKey(KeyboardKeycode(KEY_RIGHT_CTRL));
+						pressKey(KEY_RIGHT_CTRL);
 					}
 					if (input >= MOD_LEFT_GUI) {
 						input -= MOD_LEFT_GUI;
-						pressKey(KeyboardKeycode(KEY_LEFT_GUI));
+						pressKey(KEY_LEFT_GUI);
 					}
 					if (input >= MOD_LEFT_ALT) {
 						input -= MOD_LEFT_ALT;
-						pressKey(KeyboardKeycode(KEY_LEFT_ALT));
+						pressKey(KEY_LEFT_ALT);
 					}
 					if (input >= MOD_LEFT_SHIFT) {
 						input -= MOD_LEFT_SHIFT;
-						pressKey(KeyboardKeycode(KEY_LEFT_SHIFT));
+						pressKey(KEY_LEFT_SHIFT);
 					}
 					if (input >= MOD_LEFT_CTRL) {
 						input -= MOD_LEFT_CTRL;
-						pressKey(KeyboardKeycode(KEY_LEFT_CTRL));
+						pressKey(KEY_LEFT_CTRL);
 					}
-					pressKey(KeyboardKeycode(input));
+					pressKey(input);
 					delay(10);
 					releaseAll();
 				}
 			} else {
 				if (keyReleased(0, 2) && colIndex == 0 && rowIndex == 2) {
 					if (!symbolSelected)
-						pressKey(KeyboardKeycode(KEY_LEFT_CTRL));
+						pressKey(KEY_LEFT_CTRL);
 					else {
 						symbolSelected = false;
 					}
 				}
 				if (keyReleased(0, 4) && colIndex == 0 && rowIndex == 4) {
 					if (!altSelected) {
-						pressKey(KeyboardKeycode(KEY_LEFT_ALT));
+						pressKey(KEY_LEFT_ALT);
 					} else {
 						altSelected = false;
 					}
 				}
 				if (keyReleased(1, 6) && colIndex == 1 && rowIndex == 6) {
-					pressKey(KeyboardKeycode(KEY_LEFT_SHIFT));
+					pressKey(KEY_LEFT_SHIFT);
 				}
 				if (keyReleased(2, 3) && colIndex == 2 && rowIndex == 3) {
-					pressKey(KeyboardKeycode(KEY_RIGHT_SHIFT));
+					pressKey(KEY_RIGHT_SHIFT);
 				}
 				releaseAll();
 				if (keyPressed(4, 4) && colIndex == 4 && rowIndex == 4) {
