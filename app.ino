@@ -1,5 +1,5 @@
-#include "HID-Project.h"
 #include "./TrackPoint.h"
+#include "HID-Project.h"
 byte rows[] = {9, 14, 4, 5, 6, 7, 8};
 const int rowCount = sizeof(rows) / sizeof(rows[0]);
 
@@ -21,7 +21,7 @@ uint16_t keyboard_alt[colCount][rowCount];
 
 // symbol and alt are used to send alt and ctrl
 // but also to access 2nd and 3d keyboard level
-// if one was used to access a keyboard level, dont send 
+// if one was used to access a keyboard level, dont send
 // keypress on release
 bool symbolSelected;
 bool altSelected;
@@ -33,6 +33,8 @@ uint8_t mouse_state = 0;
 TrackPoint trackpoint(3, 2, 16, 0);
 int prevX = 0;
 int prevY = 0;
+int lastXDiff = 0;
+int lastYDiff = 0;
 
 void setup() {
 	Serial.begin(115200);
@@ -44,7 +46,7 @@ void setup() {
 	keyboard[0][3] = KEY_A;
 	keyboard[0][4] = NULL;	// ALT
 	keyboard[0][5] = KEY_SPACE;
-	keyboard[0][6] = KEY_SMALLER;	// Mic
+	keyboard[0][6] = KEY_SMALLER;  // Mic
 
 	keyboard[1][0] = KEY_E;
 	keyboard[1][1] = KEY_S;
@@ -65,7 +67,7 @@ void setup() {
 	keyboard[3][0] = KEY_U;
 	keyboard[3][1] = KEY_H;
 	keyboard[3][2] = KEY_Z;
-	keyboard[3][3] = KEY_ENTER;	// Enter
+	keyboard[3][3] = KEY_ENTER;	 // Enter
 	keyboard[3][4] = KEY_B;
 	keyboard[3][5] = KEY_N;
 	keyboard[3][6] = KEY_J;
@@ -73,7 +75,7 @@ void setup() {
 	keyboard[4][0] = KEY_O;
 	keyboard[4][1] = KEY_L;
 	keyboard[4][2] = KEY_I;
-	keyboard[4][3] = KEY_BACKSPACE;	// Backspace
+	keyboard[4][3] = KEY_BACKSPACE;	 // Backspace
 	keyboard[4][4] = NULL;
 	keyboard[4][5] = KEY_M;
 	keyboard[4][6] = KEY_K;
@@ -178,7 +180,7 @@ void setup() {
 	digitalWrite(17, HIGH);
 	Serial.println("eins");
 	trackpoint.reset();
-	trackpoint.setSensitivityFactor(0xc0);
+	trackpoint.setSensitivityFactor(0x48);
 	Serial.println("zwei");
 	trackpoint.setStreamMode();
 	Serial.println("drei");
@@ -380,41 +382,50 @@ void loop() {
 	printMatrix();
 	int value = analogRead(10);
 
-	Serial.println("===");
-	Serial.println(value);
-	Serial.println(mouse_state);
-	if(mouse_state == 0 && value < 1000) {
-		if(value < 500) {
-			Serial.println("eins");
+	if (mouse_state == 0 && value < 1000) {
+		if (value < 500) {
 			mouse_state = 1;
 			Mouse.press(MOUSE_RIGHT);
 		} else {
-			Serial.println("zwei");
 			mouse_state = 2;
 			Mouse.press(MOUSE_LEFT);
 		}
-	} else if(mouse_state != 0 && value > 1000) {
-		Serial.println("drei");
+	} else if (mouse_state != 0 && value > 1000) {
 		mouse_state = 0;
 		Mouse.releaseAll();
 	}
-	
+
 	// delay(10);
 }
 
 void clockInterrupt(void) {
 	trackpoint.getDataBit();
-	if(trackpoint.reportAvailable()) {
+	if (trackpoint.reportAvailable()) {
+		int i = 10;
+		int j = 3;
 		TrackPoint::DataReport d = trackpoint.getStreamReport();
-		int newX = d.x/3;
-		int newY = -d.y/3;
-		int xDifference = abs(newX - prevX);
-		int yDifference = abs(newY - prevY);
-		if(xDifference > 1) xDifference = 0;
-		if(yDifference > 1) YDifference = 0;
-		prevX += xDifference;
-		prevY += yDifference;
-		Serial.println(prevY);
+		int xValue = d.x;
+		int yValue = -d.y;
+		int xDifference = abs(xValue - prevX);
+		int yDifference = abs(yValue - prevY);
+
+		int xDirection = xValue < 0 ? -1 : 1;
+		int yDirection = yValue < 0 ? -1 : 1;
+		Serial.println(abs(xDifference - lastXDiff));
+		if (abs(xDifference - lastXDiff) < i && xValue < i*j) {
+			prevX = xValue;
+			lastXDiff = constrain(xDifference, -i*j, i*j);
+		} else {
+			prevX = 0;
+			lastXDiff = 0;
+		}
+		if (abs(yDifference - lastYDiff) < i && yValue < i*j) {
+			prevY = yValue;
+			lastYDiff = constrain(yDifference, -i*j, i*j);
+		} else {
+			prevY = 0;
+			lastYDiff = 0;
+		}
 		Mouse.move(prevX, prevY, 0);
 	}
 	// TrackPoint::DataReport d = trackpoint.getStreamReport();
