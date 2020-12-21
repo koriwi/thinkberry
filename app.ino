@@ -411,7 +411,7 @@ void clockInterrupt(void) {
 		int xDifference = abs(newX - prevX);
 		int yDifference = abs(newY - prevY);
 		if(xDifference > 1) xDifference = 0;
-		if(yDifference > 1) YDifference = 0;
+		if(yDifference > 1) yDifference = 0;
 		prevX += xDifference;
 		prevY += yDifference;
 		Serial.println(prevY);
