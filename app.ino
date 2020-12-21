@@ -1,6 +1,6 @@
 #include "HID-Project.h"
-// #include "./TrackPoint.h"
-byte rows[] = {2, 3, 4, 5, 6, 7, 8};
+#include "./TrackPoint.h"
+byte rows[] = {9, 14, 4, 5, 6, 7, 8};
 const int rowCount = sizeof(rows) / sizeof(rows[0]);
 
 byte cols[] = {15, A0, A1, A2, A3};
@@ -28,9 +28,16 @@ bool altSelected;
 
 bool comboModeActive;
 
+uint8_t mouse_state = 0;
+
+TrackPoint trackpoint(3, 2, 16, 0);
+int prevX = 0;
+int prevY = 0;
+
 void setup() {
 	Serial.begin(115200);
 	Keyboard.begin();
+	Mouse.begin();
 	keyboard[0][0] = KEY_Q;
 	keyboard[0][1] = KEY_W;
 	keyboard[0][2] = NULL;	// symbol
@@ -131,7 +138,7 @@ void setup() {
 	keyboard_alt[2][1] = KEY_8 | MOD_RIGHT_ALT;
 	keyboard_alt[2][2] = KEY_7 | MOD_RIGHT_ALT;
 	keyboard_alt[2][3] = NULL;
-	keyboard_alt[2][4] = KEY_TAB;
+	keyboard_alt[2][4] = KEY_F10;
 	keyboard_alt[2][5] = KEY_F9;
 	keyboard_alt[2][6] = KEY_F6;
 
@@ -139,8 +146,8 @@ void setup() {
 	keyboard_alt[3][1] = KEY_9 | MOD_RIGHT_ALT;
 	keyboard_alt[3][2] = KEY_0 | MOD_RIGHT_ALT;
 	keyboard_alt[3][3] = KEY_ESC;
-	keyboard_alt[3][4] = KEY_TAB | MOD_LEFT_SHIFT;
-	keyboard_alt[3][5] = NULL;
+	keyboard_alt[3][4] = KEY_F11;
+	keyboard_alt[3][5] = KEY_F12;
 	keyboard_alt[3][6] = KEY_LEFT_ARROW;
 
 	keyboard_alt[4][0] = KEY_0 | MOD_LEFT_SHIFT;
@@ -166,9 +173,18 @@ void setup() {
 	symbolSelected = false;
 	altSelected = false;
 	comboModeActive = false;
-
 	pinMode(17, OUTPUT);
+	pinMode(10, INPUT_PULLUP);
 	digitalWrite(17, HIGH);
+	Serial.println("eins");
+	trackpoint.reset();
+	trackpoint.setSensitivityFactor(0xc0);
+	Serial.println("zwei");
+	trackpoint.setStreamMode();
+	Serial.println("drei");
+
+	attachInterrupt(digitalPinToInterrupt(3), clockInterrupt, FALLING);
+	Serial.println("vier");
 }
 
 void readMatrix() {
@@ -276,7 +292,7 @@ void printMatrix() {
 						input = keyboard_symbol[colIndex][rowIndex];
 						symbolSelected = true;
 					} else {
-						input = keyboard[colIndex][rowIndex];aass
+						input = keyboard[colIndex][rowIndex];
 					}
 
 					if (input >= MOD_RIGHT_GUI) {
@@ -362,5 +378,46 @@ void loop() {
 	readMatrix();
 
 	printMatrix();
-	delay(10);
+	int value = analogRead(10);
+
+	Serial.println("===");
+	Serial.println(value);
+	Serial.println(mouse_state);
+	if(mouse_state == 0 && value < 1000) {
+		if(value < 500) {
+			Serial.println("eins");
+			mouse_state = 1;
+			Mouse.press(MOUSE_RIGHT);
+		} else {
+			Serial.println("zwei");
+			mouse_state = 2;
+			Mouse.press(MOUSE_LEFT);
+		}
+	} else if(mouse_state != 0 && value > 1000) {
+		Serial.println("drei");
+		mouse_state = 0;
+		Mouse.releaseAll();
+	}
+	
+	// delay(10);
+}
+
+void clockInterrupt(void) {
+	trackpoint.getDataBit();
+	if(trackpoint.reportAvailable()) {
+		TrackPoint::DataReport d = trackpoint.getStreamReport();
+		int newX = d.x/3;
+		int newY = -d.y/3;
+		int xDifference = abs(newX - prevX);
+		int yDifference = abs(newY - prevY);
+		if(xDifference > 1) xDifference = 0;
+		if(yDifference > 1) YDifference = 0;
+		prevX += xDifference;
+		prevY += yDifference;
+		Serial.println(prevY);
+		Mouse.move(prevX, prevY, 0);
+	}
+	// TrackPoint::DataReport d = trackpoint.getStreamReport();
+	// // Serial.println(d.x);
+	// Mouse.move(d.x, -d.y, 0);
 }

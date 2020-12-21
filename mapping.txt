@@ -1,0 +1,5 @@
+1 - Data (Green)
+2 - RST (Yellow)
+6 - CLK (Blue)
+7 - GND (Black)
+8 - VCC (Brown)
